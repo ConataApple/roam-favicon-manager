@@ -82,12 +82,13 @@ function addFavicon(el) {
 
 function removeFavicon(el) {
   if (el.dataset.faviconManager === 'true') {
-    const position = getCfg('position');
-    el.style['background-image'] = 'initial';
-    el.style['background-position'] = 'initial';
-    el.style['background-repeat'] = 'initial';
-    el.style['background-size'] = 'initial';
-    el.style[position === 'left' ? 'paddingLeft' : 'paddingRight'] = 'initial';
+    el.style.removeProperty('background-image');
+    el.style.removeProperty('background-position');
+    el.style.removeProperty('background-repeat');
+    el.style.removeProperty('background-size');
+    // Clear BOTH padding sides so a left↔right position switch never leaves a stale pad behind.
+    el.style.removeProperty('padding-left');
+    el.style.removeProperty('padding-right');
     delete el.dataset.faviconManager;
   }
 }
@@ -102,7 +103,6 @@ function reapplyAll() {
     const root = document.querySelector(sel);
     if (!root) return;
     root.querySelectorAll('a[target="_blank"]').forEach((el) => {
-      delete el.dataset.faviconManager;
       removeFavicon(el);
       addFavicon(el);
     });
