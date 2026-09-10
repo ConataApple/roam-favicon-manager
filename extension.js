@@ -52,6 +52,20 @@ function parseCustomIcons() {
   return map;
 }
 
+// Look up a custom icon for a host. Supports suffix matching so a bare domain
+// (e.g. "alicdn.com") also covers its subdomains (e.g. "img.alicdn.com").
+// Single-label entries like "com" are ignored for suffix matching to avoid
+// accidentally matching every .com host.
+function findCustomIcon(host) {
+  if (!host) return undefined;
+  const map = parseCustomIcons();
+  if (map[host]) return map[host];
+  for (const domain in map) {
+    if (domain.includes('.') && host.endsWith('.' + domain)) return map[domain];
+  }
+  return undefined;
+}
+
 function applyFavicon(el, url) {
   const position = getCfg('position');
   const size = parseInt(getCfg('size'), 10) || 16;
@@ -66,13 +80,14 @@ function applyFavicon(el, url) {
 function addFavicon(el) {
   if (el.dataset.faviconManager === 'true') return;
   const host = (el.hostname || '').replace(/^www\./, '');
-  const custom = parseCustomIcons()[host];
+  const custom = findCustomIcon(host);
   const provider = getCfg('provider');
   const url = custom || (PROVIDERS[provider] ? PROVIDERS[provider](host) : '');
   if (!url) return;
   applyFavicon(el, url);
   const fallback = getCfg('fallback');
-  if (!custom && fallback) {
+  // Fallback covers the resolved icon (custom OR provider) failing to load.
+  if (fallback) {
     const img = new Image();
     img.onerror = () => applyFavicon(el, fallback);
     img.src = url;
@@ -107,6 +122,18 @@ function reapplyAll() {
       addFavicon(el);
     });
   });
+}
+
+// Persist a setting value explicitly and re-render.
+// (Roam Depot's input onChange may not auto-persist every keystroke, so we save it ourselves.
+//  Guarded so it is harmless if the framework already saved it.)
+function makeOnChange(key) {
+  return (value) => {
+    if (value !== undefined) {
+      try { extensionAPI.settings.set(key, value); } catch (e) { /* ignore */ }
+    }
+    reapplyAll();
+  };
 }
 
 function debounce(fn, wait = 400) {
@@ -154,37 +181,37 @@ function onload(input) {
           id: 'position',
           name: 'Icon position',
           description: 'Show the favicon on the left or right of the link.',
-          action: { type: 'select', items: ['left', 'right'], onChange: reapplyAll },
+          action: { type: 'select', items: ['left', 'right'], onChange: makeOnChange('position') },
         },
         {
           id: 'size',
           name: 'Icon size (px)',
           description: 'Display size of the icon. 14–18 works well.',
-          action: { type: 'input', placeholder: '16', onChange: reapplyAll },
+          action: { type: 'input', placeholder: '16', onChange: makeOnChange('size') },
         },
         {
           id: 'spacing',
           name: 'Icon spacing (px)',
           description: 'Gap between the icon and the link text.',
-          action: { type: 'input', placeholder: '4', onChange: reapplyAll },
+          action: { type: 'input', placeholder: '4', onChange: makeOnChange('spacing') },
         },
         {
           id: 'provider',
           name: 'Icon provider',
           description: 'Service used to fetch favicons.',
-          action: { type: 'select', items: ['duckduckgo', 'google', 'yandex'], onChange: reapplyAll },
+          action: { type: 'select', items: ['duckduckgo', 'google', 'yandex'], onChange: makeOnChange('provider') },
         },
         {
           id: 'customIcons',
           name: 'Custom icons (one per line)',
-          description: 'One per line. Format: domain=image-url  e.g. github.com=https://github.com/favicon.ico',
-          action: { type: 'input', placeholder: 'github.com=https://github.com/favicon.ico', onChange: reapplyAll },
+          description: 'One per line. A bare domain also covers its subdomains (e.g. alicdn.com matches img.alicdn.com). Format: domain=image-url  e.g. github.com=https://github.com/favicon.ico',
+          action: { type: 'input', placeholder: 'github.com=https://github.com/favicon.ico', onChange: makeOnChange('customIcons') },
         },
         {
           id: 'fallback',
           name: 'Fallback icon URL (optional)',
-          description: 'Shown if a provider image fails to load.',
-          action: { type: 'input', placeholder: 'https://...', onChange: reapplyAll },
+          description: 'Shown if the resolved icon (custom or provider) fails to load.',
+          action: { type: 'input', placeholder: 'https://...', onChange: makeOnChange('fallback') },
         },
       ],
     });
