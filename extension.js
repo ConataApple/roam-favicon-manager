@@ -140,18 +140,26 @@ function reapplyAll() {
 // Persist a setting value explicitly and re-render.
 // (Roam Depot's input onChange may not auto-persist every keystroke, so we save it ourselves.
 //  Guarded so it is harmless if the framework already saved it.)
+// Roam Depot's settings onChange receives an EVENT OBJECT, not the raw value:
+// evt.target.value for input/select, evt.target.checked for switch. The persisted
+// settings store can also return stale values immediately after a change, so we read
+// the fresh value straight from the event and persist it ourselves (confirmed against
+// the shipping Depot extension camflint/reddit-unofficial).
+function extractValue(evt) {
+  if (evt && evt.target) {
+    if (typeof evt.target.checked === 'boolean') return evt.target.checked;
+    return evt.target.value;
+  }
+  return evt; // already the value (defensive fallback)
+}
+
 function makeOnChange(key) {
-  return (value) => {
-    // Capture the new value. Roam Depot passes the value to onChange for input/select
-    // settings; if it passes something else (or relies on auto-persist), re-read from
-    // storage so the cache stays in sync either way. Caching + explicit set guarantees
-    // the typed value reaches the render path immediately and survives reloads.
-    if (typeof value === 'string') {
-      state[key] = value;
-    } else {
-      syncState(key);
+  return (evt) => {
+    const v = extractValue(evt);
+    if (v !== undefined && v !== null) {
+      state[key] = v;
+      try { extensionAPI.settings.set(key, v); } catch (e) { /* ignore */ }
     }
-    try { extensionAPI.settings.set(key, state[key]); } catch (e) { /* ignore */ }
     reapplyAll();
   };
 }
