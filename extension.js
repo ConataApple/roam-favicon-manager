@@ -16,7 +16,7 @@ const DEFAULTS = {
   position: 'left',
   size: '16',
   spacing: '4',
-  provider: 'duckduckgo',
+  provider: 'favicon.im',
   customIcons: '',
   fallback: '',
 };
@@ -25,6 +25,8 @@ const PROVIDERS = {
   duckduckgo: (h) => `https://icons.duckduckgo.com/ip3/${h}.ico`,
   google:     (h) => `https://www.google.com/s2/favicons?domain=${h}`,
   yandex:     (h) => `https://favicon.yandex.net/favicon/${h}`,
+  'favicon.im': (h) => `https://favicon.im/${h}`,
+  iowen:      (h) => `https://api.iowen.cn/favicon/${h}.png`,
 };
 
 const observers = {};
@@ -204,7 +206,7 @@ function onload(input) {
           id: 'provider',
           name: 'Icon provider',
           description: 'Service used to fetch favicons.',
-          action: { type: 'select', items: ['duckduckgo', 'google', 'yandex'], onChange: makeOnChange('provider') },
+          action: { type: 'select', items: ['duckduckgo', 'google', 'yandex', 'favicon.im', 'iowen'], onChange: makeOnChange('provider') },
         },
         {
           id: 'customIcons',
