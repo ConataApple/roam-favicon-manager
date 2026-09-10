@@ -25,14 +25,15 @@ A small, friendly Roam Research extension that displays the favicon (website ico
 
 ## Custom icons — quick example
 
-In the settings panel, under *Custom icons*, add one site per line:
+In the settings panel, under *Custom icons*, enter a `domain=image-url` mapping, e.g.:
 
 ```
-wikipedia.org=https://www.google.com/s2/favicons?domain=wikipedia.org&sz=64
 github.com=https://www.google.com/s2/favicons?domain=github.com&sz=64
 ```
 
-The part before `=` is the website domain (no `www.` needed). The part after `=` is any image URL.
+The part before `=` is the website domain (no `www.` needed). A bare domain also covers its subdomains — e.g. `github.com` will match `gist.github.com` too. The part after `=` is any image URL.
+
+> Note: this field is currently a single-line input, so it holds **one mapping at a time**. A multi-line editor (several `domain=image-url` lines) is a planned upgrade.
 
 ## For developers
 
