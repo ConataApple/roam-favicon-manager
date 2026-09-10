@@ -81,11 +81,12 @@ function addFavicon(el) {
   if (el.dataset.faviconManager === 'true') return;
   const host = (el.hostname || '').replace(/^www\./, '');
   const custom = findCustomIcon(host);
-  const fallback = getCfg('fallback');
   const provider = getCfg('provider');
+  const fallback = getCfg('fallback');
   const providerUrl = PROVIDERS[provider] ? PROVIDERS[provider](host) : '';
-  // Priority: custom icon > fallback > provider. If one fails to load, fall through to the next.
-  const candidates = [custom, fallback, providerUrl].filter(Boolean);
+  // Priority: custom icon > provider > fallback. If one fails to load, fall through to the next.
+  // The fallback is a true fallback: it only appears when the real icon (custom or provider) fails to load.
+  const candidates = [custom, providerUrl, fallback].filter(Boolean);
   if (candidates.length === 0) return;
   const tryNext = (i) => {
     if (i >= candidates.length) return;
@@ -214,7 +215,7 @@ function onload(input) {
         {
           id: 'fallback',
           name: 'Fallback icon URL (optional)',
-          description: 'Icon for any link without a custom icon (falls back to the provider if this URL fails).',
+          description: 'Shown only if the normal icon (custom or provider) fails to load.',
           action: { type: 'input', placeholder: 'https://...', onChange: makeOnChange('fallback') },
         },
       ],
