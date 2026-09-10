@@ -1,7 +1,11 @@
 # Changelog
 
-## 1.0.10
-- **Provider fix for China (and regions where DuckDuckGo is blocked).** DuckDuckGo's favicon service is inaccessible from mainland China, so provider icons never loaded there — only the fallback showed. Added two China-accessible providers, **favicon.im** and **iowen** (api.iowen.cn), to the provider list, and changed the default provider to `favicon.im` so icons work out of the box. Users elsewhere can still pick duckduckgo / google / yandex.
+## 1.0.11
+- **Reverted 1.0.10 (it was based on a wrong assumption).** DuckDuckGo works fine for the user (confirmed by repeated testing), so the `favicon.im` default and the extra `favicon.im` / `iowen` providers added in 1.0.10 have been removed. The provider list is back to **duckduckgo / google / yandex**, with `duckduckgo` as the default.
+- **Fixed Custom icons and Fallback not taking effect (the real bug).** The provider worked only because its default (`duckduckgo`) is non-empty, so it rendered even when the typed value was never captured. `customIcons` and `fallback` have empty defaults, so they stayed blank whenever the typed `input` value didn't reach the render path. Added an in-memory settings cache (`state` + `syncState`) and made `makeOnChange` reliably capture the typed value (and persist it), so Custom icons and Fallback now apply immediately and survive reloads.
+
+## 1.0.10 (withdrawn in 1.0.11)
+- ~~Added `favicon.im` / `iowen` providers and changed the default to `favicon.im` on the assumption that DuckDuckGo is blocked in mainland China. This assumption was wrong for the user (DuckDuckGo works for them), so the change was reverted in 1.0.11.~~
 
 ## 1.0.9
 - **Fixed fallback overriding all icons.** 1.0.7 made the fallback the primary icon for any link without a custom mapping, so every normal link (which DuckDuckGo serves a real favicon for) showed the fallback instead of its real icon. Reverted the priority to **custom icon > provider > fallback**: real provider favicons show for normal links, and the fallback is used only when the icon actually fails to load (its true purpose). Updated the Fallback description to match.
