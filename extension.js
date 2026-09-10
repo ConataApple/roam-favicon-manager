@@ -53,7 +53,7 @@ function parseCustomIcons() {
 }
 
 // Look up a custom icon for a host. Supports suffix matching so a bare domain
-// (e.g. "alicdn.com") also covers its subdomains (e.g. "img.alicdn.com").
+// (e.g. "github.com") also covers its subdomains (e.g. "gist.github.com").
 // Single-label entries like "com" are ignored for suffix matching to avoid
 // accidentally matching every .com host.
 function findCustomIcon(host) {
