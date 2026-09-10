@@ -81,17 +81,21 @@ function addFavicon(el) {
   if (el.dataset.faviconManager === 'true') return;
   const host = (el.hostname || '').replace(/^www\./, '');
   const custom = findCustomIcon(host);
-  const provider = getCfg('provider');
-  const url = custom || (PROVIDERS[provider] ? PROVIDERS[provider](host) : '');
-  if (!url) return;
-  applyFavicon(el, url);
   const fallback = getCfg('fallback');
-  // Fallback covers the resolved icon (custom OR provider) failing to load.
-  if (fallback) {
+  const provider = getCfg('provider');
+  const providerUrl = PROVIDERS[provider] ? PROVIDERS[provider](host) : '';
+  // Priority: custom icon > fallback > provider. If one fails to load, fall through to the next.
+  const candidates = [custom, fallback, providerUrl].filter(Boolean);
+  if (candidates.length === 0) return;
+  const tryNext = (i) => {
+    if (i >= candidates.length) return;
+    const url = candidates[i];
+    applyFavicon(el, url);
     const img = new Image();
-    img.onerror = () => applyFavicon(el, fallback);
+    img.onerror = () => tryNext(i + 1);
     img.src = url;
-  }
+  };
+  tryNext(0);
   el.dataset.faviconManager = 'true';
 }
 
@@ -204,13 +208,13 @@ function onload(input) {
         {
           id: 'customIcons',
           name: 'Custom icons',
-          description: 'Map a domain to a custom favicon. A bare domain also covers its subdomains (e.g. alicdn.com matches img.alicdn.com). Format: domain=image-url  e.g. github.com=https://github.com/favicon.ico',
+          description: 'Custom favicon for a domain. Format: domain=image-url  e.g. github.com=https://github.com/favicon.ico',
           action: { type: 'input', placeholder: 'github.com=https://github.com/favicon.ico', onChange: makeOnChange('customIcons') },
         },
         {
           id: 'fallback',
           name: 'Fallback icon URL (optional)',
-          description: 'Shown if the resolved icon (custom or provider) fails to load.',
+          description: 'Icon for any link without a custom icon (falls back to the provider if this URL fails).',
           action: { type: 'input', placeholder: 'https://...', onChange: makeOnChange('fallback') },
         },
       ],
