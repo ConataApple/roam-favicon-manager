@@ -177,8 +177,8 @@ function onload(input) {
         {
           id: 'customIcons',
           name: 'Custom icons (one per line)',
-          description: 'Format: domain=image-url  e.g. github.com=https://github.com/favicon.ico',
-          action: { type: 'text', placeholder: 'github.com=https://github.com/favicon.ico', onChange: reapplyAll },
+          description: 'One per line. Format: domain=image-url  e.g. github.com=https://github.com/favicon.ico',
+          action: { type: 'input', placeholder: 'github.com=https://github.com/favicon.ico', onChange: reapplyAll },
         },
         {
           id: 'fallback',
