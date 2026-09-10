@@ -12,11 +12,16 @@
 
 let extensionAPI = null;
 
+// In-memory cache of the current settings. Mirrors what's persisted so that a
+// settings change takes effect immediately (reapplyAll reads from here), and so a
+// value is always available even before/if the panel's auto-persist round-trips.
+const state = {};
+
 const DEFAULTS = {
   position: 'left',
   size: '16',
   spacing: '4',
-  provider: 'favicon.im',
+  provider: 'duckduckgo',
   customIcons: '',
   fallback: '',
 };
@@ -25,17 +30,18 @@ const PROVIDERS = {
   duckduckgo: (h) => `https://icons.duckduckgo.com/ip3/${h}.ico`,
   google:     (h) => `https://www.google.com/s2/favicons?domain=${h}`,
   yandex:     (h) => `https://favicon.yandex.net/favicon/${h}`,
-  'favicon.im': (h) => `https://favicon.im/${h}`,
-  iowen:      (h) => `https://api.iowen.cn/favicon/${h}.png`,
 };
 
 const observers = {};
 
+// Pull a setting value into the in-memory cache from persisted storage.
+function syncState(key) {
+  const v = extensionAPI && extensionAPI.settings ? extensionAPI.settings.get(key) : undefined;
+  state[key] = (v !== undefined && v !== null && v !== '') ? v : DEFAULTS[key];
+}
+
 function getCfg(key) {
-  if (extensionAPI && extensionAPI.settings) {
-    const v = extensionAPI.settings.get(key);
-    if (v !== undefined && v !== null && v !== '') return v;
-  }
+  if (state[key] !== undefined) return state[key];
   return DEFAULTS[key];
 }
 
@@ -136,9 +142,16 @@ function reapplyAll() {
 //  Guarded so it is harmless if the framework already saved it.)
 function makeOnChange(key) {
   return (value) => {
-    if (value !== undefined) {
-      try { extensionAPI.settings.set(key, value); } catch (e) { /* ignore */ }
+    // Capture the new value. Roam Depot passes the value to onChange for input/select
+    // settings; if it passes something else (or relies on auto-persist), re-read from
+    // storage so the cache stays in sync either way. Caching + explicit set guarantees
+    // the typed value reaches the render path immediately and survives reloads.
+    if (typeof value === 'string') {
+      state[key] = value;
+    } else {
+      syncState(key);
     }
+    try { extensionAPI.settings.set(key, state[key]); } catch (e) { /* ignore */ }
     reapplyAll();
   };
 }
@@ -179,6 +192,7 @@ function onload(input) {
       if (extensionAPI.settings.get(k) === undefined) {
         extensionAPI.settings.set(k, DEFAULTS[k]);
       }
+      syncState(k);
     });
 
     extensionAPI.settings.panel.create({
@@ -206,7 +220,7 @@ function onload(input) {
           id: 'provider',
           name: 'Icon provider',
           description: 'Service used to fetch favicons.',
-          action: { type: 'select', items: ['duckduckgo', 'google', 'yandex', 'favicon.im', 'iowen'], onChange: makeOnChange('provider') },
+          action: { type: 'select', items: ['duckduckgo', 'google', 'yandex'], onChange: makeOnChange('provider') },
         },
         {
           id: 'customIcons',
