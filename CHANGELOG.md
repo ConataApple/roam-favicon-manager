@@ -1,6 +1,9 @@
 # Changelog
 
-## 1.0.11
+## 1.0.12
+- **Fixed Custom icons and Fallback still not working (the real root cause).** 1.0.11 assumed Roam Depot passes the raw value to a setting's `onChange`, so it checked `typeof value === 'string'`. That was wrong: Depot passes an **event object** (`evt.target.value` for input/select, `evt.target.checked` for switch) and the persisted store can return stale values right after a change. So `customIcons`/`fallback` (empty defaults) never captured what was typed, while `provider` kept "working" only because its non-empty default masked the bug. `makeOnChange` now reads the value from the event object via `extractValue(evt)` — the same pattern used by the shipping Depot extension `camflint/reddit-unofficial` — and persists it with `settings.set`. Custom icons and Fallback now take effect immediately and survive reloads. (1.0.11's cache was kept; it's now fed the correct value.)
+
+## 1.0.11 (incomplete — superseded by 1.0.12)
 - **Reverted 1.0.10 (it was based on a wrong assumption).** DuckDuckGo works fine for the user (confirmed by repeated testing), so the `favicon.im` default and the extra `favicon.im` / `iowen` providers added in 1.0.10 have been removed. The provider list is back to **duckduckgo / google / yandex**, with `duckduckgo` as the default.
 - **Fixed Custom icons and Fallback not taking effect (the real bug).** The provider worked only because its default (`duckduckgo`) is non-empty, so it rendered even when the typed value was never captured. `customIcons` and `fallback` have empty defaults, so they stayed blank whenever the typed `input` value didn't reach the render path. Added an in-memory settings cache (`state` + `syncState`) and made `makeOnChange` reliably capture the typed value (and persist it), so Custom icons and Fallback now apply immediately and survive reloads.
 
