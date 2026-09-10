@@ -13,7 +13,7 @@ A small, friendly Roam Research extension that displays the favicon (website ico
   - **Icon size** — in pixels (14–18 recommended)
   - **Icon spacing** — gap between the icon and the text
   - **Icon provider** — duckduckgo / google / yandex
-  - **Custom icons** — assign a specific icon to any website (one per line: `domain=image-url`)
+  - **Custom icons** — assign a specific favicon to any website by `domain=image-url` (e.g. `github.com=https://github.com/favicon.ico`). A bare domain also covers its subdomains.
   - **Fallback icon** — an optional icon shown if a provider fails to load an image
 - Settings are saved per-graph and persist across sessions.
 
