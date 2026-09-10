@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.3
+- Copy/polish pass on user-facing text (no functional change):
+  - README intro no longer calls the extension "a community contribution" or uses "wonderful"; it now simply states it is a fork of Paul Vieira's roam-show-favicon, with credit to him.
+  - Replaced the `z-lib.fm` example (a piracy site) in the Custom icons docs and the settings placeholder with mainstream sites (github.com / wikipedia.org).
+
 ## 1.0.2
 - **Fixed the settings panel never appearing when loaded via Roam Depot** (real bug, reported by community member **panterarocks49**).
   - Root cause: Roam Depot passes the extension API **wrapped** as `{ extensionAPI }` into `onload`, not the API object directly. The previous guard `input && input.settings ? input` failed because the wrapper has no `.settings`, so it fell back to `window.roamjsExtensionAPI` (undefined in Roam Depot) and `extensionAPI` became `null` — sending the code into the "no settings panel" branch.
