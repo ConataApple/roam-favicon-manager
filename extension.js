@@ -203,8 +203,8 @@ function onload(input) {
         },
         {
           id: 'customIcons',
-          name: 'Custom icons (one per line)',
-          description: 'One per line. A bare domain also covers its subdomains (e.g. alicdn.com matches img.alicdn.com). Format: domain=image-url  e.g. github.com=https://github.com/favicon.ico',
+          name: 'Custom icons',
+          description: 'Map a domain to a custom favicon. A bare domain also covers its subdomains (e.g. alicdn.com matches img.alicdn.com). Format: domain=image-url  e.g. github.com=https://github.com/favicon.ico',
           action: { type: 'input', placeholder: 'github.com=https://github.com/favicon.ico', onChange: makeOnChange('customIcons') },
         },
         {
