@@ -2,13 +2,8 @@
 
 A small, friendly Roam Research extension that displays the favicon (website icon) next to any external link — with a **real settings panel** so you never have to touch code.
 
-> 💛 This extension is a community contribution, built **on top of** the wonderful original
-> [**roam-show-favicon**](https://github.com/paulovieira/roam-show-favicon) by
-> **Paul Vieira (paulovieira)**. All credit for the original idea and implementation goes to him.
-> The original plugin did not have a settings UI (the author listed "make the options
-> configurable by the user" as a future improvement); this version adds that settings panel
-> plus per-site custom icons. If Paul ever wants these enhancements merged back into his
-> project, we would be delighted.
+> Favicon Manager is a fork of [**roam-show-favicon**](https://github.com/paulovieira/roam-show-favicon) by **Paul Vieira (paulovieira)**. All credit for the original idea and implementation goes to him.
+> The original plugin had no settings UI (the author listed "make the options configurable by the user" as a future improvement); this version adds that settings panel plus per-site custom icons.
 
 ## What it does
 
@@ -33,7 +28,7 @@ A small, friendly Roam Research extension that displays the favicon (website ico
 In the settings panel, under *Custom icons*, add one site per line:
 
 ```
-z-lib.fm=https://z-lib.fm/img/favicons/favicon.svg
+wikipedia.org=https://www.google.com/s2/favicons?domain=wikipedia.org&sz=64
 github.com=https://www.google.com/s2/favicons?domain=github.com&sz=64
 ```
 
