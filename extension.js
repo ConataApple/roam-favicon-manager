@@ -133,8 +133,12 @@ function stopObserver(selector) {
 }
 
 function onload(input) {
-  // Roam Depot passes the extensionAPI into onload for published extensions.
-  extensionAPI = input && input.settings ? input : (window.roamjsExtensionAPI || null);
+  // Roam Depot passes the extension API WRAPPED as { extensionAPI } — NOT the API object directly.
+  // (Verified against shipping extensions RoamJS/autotag and 8bitgentleman/roam-depot-tweet-extract.)
+  // The legacy roam/js route exposes the same API on window.roamjsExtensionAPI.
+  extensionAPI = (input && input.extensionAPI) ? input.extensionAPI
+    : (input && input.settings) ? input
+    : (window.roamjsExtensionAPI || null);
 
   if (extensionAPI) {
     Object.keys(DEFAULTS).forEach((k) => {
