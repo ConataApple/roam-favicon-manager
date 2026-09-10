@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.0.6
+- **Fixed misleading copy on the Custom icons field.** The settings control is a single-line `input`, so the previous "one per line" wording (in the field name and description, and in the README) was inaccurate. Reworded to describe a single `domain=image-url` entry without claiming multi-line support. (True multi-line input via a `reactComponent` textarea remains a possible future upgrade, not yet implemented.)
+
+## 1.0.5
+- **Fixed custom icons and fallback not taking effect.**
+  - Custom-icon matching was exact-hostname only, so a bare entry like `alicdn.com` never matched real links such as `img.alicdn.com`. Added `findCustomIcon()` with **suffix matching**: a bare domain now also covers its subdomains (and single-label entries like `com` are ignored for suffix matching to avoid over-matching).
+  - Fallback now triggers when the **resolved** icon (custom OR provider) fails to load, not only when there was no custom icon and the provider failed.
+  - Settings panel `onChange` now **explicitly saves** the typed value (`makeOnChange`) before re-applying, so input values are guaranteed to persist regardless of how Roam Depot persists `input` changes.
+  - Updated the Custom icons description to explain the subdomain behavior.
+
+## 1.0.4
+- **Fixed the Custom icons field having no editable input box.**
+  - Root cause: the setting used `action.type: 'text'`. In Roam Depot's settings schema, `text` renders as static text (a label), not an editable control — so the field showed the example but offered nowhere to type.
+  - Changed it to `action.type: 'input'` (the same type used by the other working fields: size, spacing, fallback), so the Custom icons row now renders a real text box.
+  - Confirmed `textarea` is not supported by the Roam Depot renderer (zero depot extensions use it), so `input` is the correct choice.
+
 ## 1.0.3
 - Copy/polish pass on user-facing text (no functional change):
   - README intro no longer calls the extension "a community contribution" or uses "wonderful"; it now simply states it is a fork of Paul Vieira's roam-show-favicon, with credit to him.
