@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.10
+- **Provider fix for China (and regions where DuckDuckGo is blocked).** DuckDuckGo's favicon service is inaccessible from mainland China, so provider icons never loaded there — only the fallback showed. Added two China-accessible providers, **favicon.im** and **iowen** (api.iowen.cn), to the provider list, and changed the default provider to `favicon.im` so icons work out of the box. Users elsewhere can still pick duckduckgo / google / yandex.
+
 ## 1.0.9
 - **Fixed fallback overriding all icons.** 1.0.7 made the fallback the primary icon for any link without a custom mapping, so every normal link (which DuckDuckGo serves a real favicon for) showed the fallback instead of its real icon. Reverted the priority to **custom icon > provider > fallback**: real provider favicons show for normal links, and the fallback is used only when the icon actually fails to load (its true purpose). Updated the Fallback description to match.
 
