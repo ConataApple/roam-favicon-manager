@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.8
+- Replaced the `alicdn` example in an internal code comment with a `github.com`/`gist.github.com` example (no user-facing copy mentions alicdn anymore).
+
 ## 1.0.7
 - **Fixed Fallback icon not appearing.** It previously only showed if the resolved icon failed to load, but providers (DuckDuckGo etc.) almost always return a valid image, so the fallback was effectively never used. Changed priority to **custom icon > fallback > provider**, with on-error fall-through: a link without a custom icon now shows the fallback directly, and the provider is used only if the fallback URL itself fails to load.
 - Simplified the Custom icons description (removed the alicdn subdomain example; kept it short per feedback).
