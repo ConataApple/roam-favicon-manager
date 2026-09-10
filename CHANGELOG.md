@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2
+- **Fixed the settings panel never appearing when loaded via Roam Depot** (real bug, reported by community member **panterarocks49**).
+  - Root cause: Roam Depot passes the extension API **wrapped** as `{ extensionAPI }` into `onload`, not the API object directly. The previous guard `input && input.settings ? input` failed because the wrapper has no `.settings`, so it fell back to `window.roamjsExtensionAPI` (undefined in Roam Depot) and `extensionAPI` became `null` — sending the code into the "no settings panel" branch.
+  - `onload` now reads `input.extensionAPI` first (Roam Depot), then `input` directly (defensive), then `window.roamjsExtensionAPI` (legacy roam/js). The panel now creates correctly under Roam Depot.
+  - Verified the `{ extensionAPI }` shape against two shipping Roam Depot extensions: `RoamJS/autotag` and `8bitgentleman/roam-depot-tweet-extract`.
+
 ## 1.0.1
 - Fixed a style-reset bug reported by community member **panterarocks49**: when settings (e.g. icon position left↔right) changed, old inline styles were never cleared, so new styles stacked on top of stale ones.
   - `removeFavicon` now uses `removeProperty` to truly drop inline styles (previously pinned them to `initial`).
