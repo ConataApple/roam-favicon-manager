@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.9
+- **Fixed fallback overriding all icons.** 1.0.7 made the fallback the primary icon for any link without a custom mapping, so every normal link (which DuckDuckGo serves a real favicon for) showed the fallback instead of its real icon. Reverted the priority to **custom icon > provider > fallback**: real provider favicons show for normal links, and the fallback is used only when the icon actually fails to load (its true purpose). Updated the Fallback description to match.
+
 ## 1.0.8
 - Replaced the `alicdn` example in an internal code comment with a `github.com`/`gist.github.com` example (no user-facing copy mentions alicdn anymore).
 
