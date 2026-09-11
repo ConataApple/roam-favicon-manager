@@ -81,15 +81,15 @@ function numericCfg(key) {
 
 function parseCustomIcons() {
   const raw = getCfg('customIcons') || '';
-  const map = {};
+  const map = new Map();
   raw.split('\n').forEach((line) => {
     const t = line.trim().replace(/\r$/, '');
     if (!t || t.startsWith('#')) return;
     const idx = t.indexOf('=');
     if (idx === -1) return;
-    const domain = t.slice(0, idx).trim().replace(/^www\./, '');
+    const domain = t.slice(0, idx).trim().toLowerCase().replace(/^www\./, '').replace(/\.$/, '');
     const url = t.slice(idx + 1).trim();
-    if (domain && url) map[domain] = url;
+    if (domain && url) map.set(domain, url);
   });
   return map;
 }
@@ -101,11 +101,16 @@ function parseCustomIcons() {
 function findCustomIcon(host) {
   if (!host) return undefined;
   const map = parseCustomIcons();
-  if (map[host]) return map[host];
-  for (const domain in map) {
-    if (domain.includes('.') && host.endsWith('.' + domain)) return map[domain];
+  if (map.has(host)) return map.get(host);
+  let matchedDomain = '';
+  let icon;
+  for (const [domain, url] of map) {
+    if (domain.includes('.') && host.endsWith('.' + domain) && domain.length > matchedDomain.length) {
+      matchedDomain = domain;
+      icon = url;
+    }
   }
-  return undefined;
+  return icon;
 }
 
 function applyFavicon(el, url) {
@@ -136,7 +141,7 @@ function addFavicon(el) {
   const previous = managedLinks.get(el);
   if (previous?.href === el.href) return;
   if (previous) removeFavicon(el);
-  const host = el.hostname.replace(/^www\./, '');
+  const host = el.hostname.toLowerCase().replace(/^www\./, '').replace(/\.$/, '');
   // Keep custom > provider > fallback; a provider's valid placeholder is not a load error.
   const candidates = [...new Set([
     findCustomIcon(host), PROVIDERS[getCfg('provider')](host), getCfg('fallback'),

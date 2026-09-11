@@ -215,6 +215,59 @@ await test('Fallback order is custom, provider, fallback; exhausting all images 
   equal(h.link.style.paddingLeft, '');
 });
 
+await test('Custom domain matching is case-insensitive and ignores www', {
+  customIcons: 'WWW.Example.COM=https://icons.example/custom.png',
+}, (h) => {
+  assert(h.link.style.backgroundImage.includes('/custom.png'), 'Case-insensitive domain did not match');
+});
+
+await test('The most specific custom parent domain wins', {
+  customIcons: 'example.com=https://icons.example/parent.png\nteam.example.com=https://icons.example/team.png',
+}, (h) => {
+  assert(h.link.style.backgroundImage.includes('/team.png'), 'Less-specific domain won');
+}, { html: '<div class="roam-main"><a target="_blank" href="https://docs.team.example.com">Team</a></div>' });
+
+await test('Single-label hostnames do not read Object prototype properties', {}, (h) => {
+  equal(h.images[0].url, 'https://icons.duckduckgo.com/ip3/constructor.ico');
+}, { html: '<div class="roam-main"><a target="_blank" href="https://constructor">Intranet</a></div>' });
+
+await test('Single-label mappings do not match every public suffix', { customIcons: 'com=https://icons.example/wrong.png' }, (h) => {
+  assert(h.link.style.backgroundImage.includes('duckduckgo.com'), 'Single-label suffix overmatched');
+});
+
+await test('Clearing custom and fallback values persists across reload', {
+  customIcons: 'example.com=https://icons.example/custom.png', fallback: 'https://icons.example/fallback.png',
+}, (h) => {
+  h.input('customIcons', ''); h.input('fallback', '');
+  h.extension.onunload(); h.load();
+  equal(h.settings.customIcons, ''); equal(h.settings.fallback, '');
+  assert(h.link.style.backgroundImage.includes('duckduckgo.com'), 'Cleared custom icon remained active');
+});
+
+await test('A successful custom image keeps priority and releases handlers', {
+  customIcons: 'example.com=https://icons.example/custom.png', fallback: 'https://icons.example/fallback.png',
+}, (h) => {
+  h.images[0].succeed();
+  equal(h.images.length, 1);
+  assert(h.link.style.backgroundImage.includes('/custom.png'), 'Success incorrectly triggered fallback');
+  assert(h.images.every((image) => !image.onerror && !image.onload), 'Completed image retained callbacks');
+});
+
+await test('Raw setting values and the direct API compatibility path still work', {}, (h) => {
+  h.action('size').onChange('24');
+  equal(h.settings.size, '24');
+  equal(h.link.style.backgroundSize, '24px auto');
+}, { shape: 'direct' });
+
+await test('Rejected asynchronous persistence is reported without an unhandled rejection', {
+  position: 'left', size: '16', spacing: '4', provider: 'duckduckgo', customIcons: '', fallback: '',
+}, async (h) => {
+  h.input('size', '24');
+  await Promise.resolve();
+  equal(h.link.style.backgroundSize, '24px auto');
+  assert(h.warnings.length > 0, 'Rejected save was not reported');
+}, { setResult: Promise.reject(new Error('Test asynchronous storage failure')) });
+
 window.__faviconTestResults = results;
 document.querySelector('#results').textContent = JSON.stringify(results, null, 2);
 document.title = results.every((result) => result.pass) ? 'PASS' : 'FAIL';
