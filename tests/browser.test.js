@@ -98,6 +98,123 @@ await test('Synchronous persistence failure is visible without breaking renderin
   assert(h.warnings.length > 0, 'Persistence failure was silently swallowed');
 }, { setError: new Error('Test storage failure') });
 
+await test('Unload cancels pending debounced work', {}, async (h) => {
+  h.link.append(' changed');
+  await Promise.resolve();
+  assert(h.timers.size > 0, 'Fixture did not queue a debounce');
+  h.extension.onunload();
+  equal(h.link.style.backgroundImage, '');
+  h.flushTimers();
+  equal(h.link.style.backgroundImage, '');
+  equal(h.timers.size, 0);
+});
+
+await test('An old image error cannot repaint after unload', { fallback: 'https://icons.example/fallback.png' }, (h) => {
+  const staleError = h.images[0].onerror;
+  h.extension.onunload();
+  staleError();
+  equal(h.link.style.backgroundImage, '');
+  assert(h.images.every((image) => !image.onerror && !image.onload), 'Image callbacks were not released');
+});
+
+await test('An old image error cannot overwrite new settings', { fallback: 'https://icons.example/fallback.png' }, (h) => {
+  const staleError = h.images[0].onerror;
+  h.select('provider', 'google');
+  staleError();
+  assert(h.link.style.backgroundImage.includes('google.com/s2/favicons'), 'Old request overwrote Google icon');
+});
+
+await test('An old panel callback cannot write after unload or a new load', {}, (h) => {
+  const oldPanel = h.panels[0];
+  h.extension.onunload();
+  h.input('size', '90', oldPanel);
+  equal(h.settings.size, '16');
+  equal(h.link.style.backgroundImage, '');
+  h.load();
+  h.input('size', '90', oldPanel);
+  equal(h.settings.size, '16');
+  equal(h.link.style.backgroundSize, '16px auto');
+});
+
+await test('Repeated loading does not leave observers running after unload', {}, (h) => {
+  h.load();
+  h.extension.onunload();
+  assert(h.observers.every((observer) => !observer.connected), 'An observer from an earlier load leaked');
+});
+
+await test('Loading without an API does not retain the previous graph settings', { size: '24' }, (h) => {
+  h.extension.onunload(); h.load('missing');
+  equal(h.link.style.backgroundSize, '16px auto');
+});
+
+await test('Unload restores original styles and priorities without changing unrelated styles', {}, (h) => {
+  h.select('position', 'right');
+  h.link.style.color = 'blue';
+  h.extension.onunload();
+  equal(h.link.style.paddingLeft, '7px');
+  equal(h.link.style.paddingRight, '3px');
+  equal(h.link.style.getPropertyPriority('padding-left'), 'important');
+  equal(h.link.style.backgroundImage, 'linear-gradient(red, blue)');
+  equal(h.link.style.color, 'blue');
+}, { styles: 'padding-left: 7px !important; padding-right: 3px; background-image: linear-gradient(red, blue); color: red;' });
+
+await test('Editing href in place updates the icon', {}, async (h) => {
+  h.link.href = 'https://different.example/path';
+  await h.settle();
+  assert(h.link.style.backgroundImage.includes('different.example'), 'Link retained the previous domain icon');
+});
+
+await test('A link that stops opening a new tab loses the decoration', {}, async (h) => {
+  h.link.target = '_self';
+  await h.settle();
+  equal(h.link.style.backgroundImage, '');
+  equal(h.link.style.paddingLeft, '');
+});
+
+await test('Replacing the sidebar still discovers new links', {}, async (h) => {
+  h.doc.querySelector('#right-sidebar').remove();
+  const sidebar = h.doc.createElement('div'); sidebar.id = 'right-sidebar';
+  sidebar.innerHTML = '<a target="_blank" href="https://sidebar.example">Sidebar</a>';
+  h.doc.body.append(sidebar);
+  await h.settle();
+  assert(sidebar.querySelector('a').style.backgroundImage.includes('sidebar.example'), 'Replacement sidebar was not processed');
+});
+
+await test('A main root mounted after loading is discovered', {}, async (h) => {
+  const main = h.doc.createElement('div'); main.className = 'roam-main';
+  main.innerHTML = '<a target="_blank" href="https://late.example">Late root</a>';
+  h.doc.body.append(main);
+  await h.settle();
+  assert(main.querySelector('a').style.backgroundImage.includes('late.example'), 'Late main root was not processed');
+}, { html: '<div>Loading graph</div>' });
+
+await test('Detached links are restored rather than retained', {}, async (h) => {
+  h.link.remove();
+  await h.settle();
+  equal(h.link.style.backgroundImage, '');
+  equal(h.link.style.paddingLeft, '');
+});
+
+for (const href of ['mailto:person@example.com', 'file:///tmp/example', 'javascript:void(0)']) {
+  await test(`Non-HTTP link is not decorated: ${href}`, {}, (h) => {
+    equal(h.link.style.backgroundImage, '');
+    equal(h.images.length, 0);
+  }, { html: `<div class="roam-main"><a target="_blank" href="${href}">Other scheme</a></div>` });
+}
+
+await test('Fallback order is custom, provider, fallback; exhausting all images restores the link', {
+  customIcons: 'example.com=https://icons.example/custom.png', fallback: 'https://icons.example/fallback.png',
+}, (h) => {
+  assert(h.link.style.backgroundImage.includes('/custom.png'), 'Custom icon was not first');
+  h.images.at(-1).fail();
+  assert(h.link.style.backgroundImage.includes('duckduckgo.com'), 'Provider was not second');
+  h.images.at(-1).fail();
+  assert(h.link.style.backgroundImage.includes('/fallback.png'), 'Fallback was not third');
+  h.images.at(-1).fail();
+  equal(h.link.style.backgroundImage, '');
+  equal(h.link.style.paddingLeft, '');
+});
+
 window.__faviconTestResults = results;
 document.querySelector('#results').textContent = JSON.stringify(results, null, 2);
 document.title = results.every((result) => result.pass) ? 'PASS' : 'FAIL';

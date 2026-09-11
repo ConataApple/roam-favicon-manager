@@ -32,7 +32,17 @@ const PROVIDERS = {
   yandex:     (h) => `https://favicon.yandex.net/favicon/${h}`,
 };
 
-const observers = {};
+const ROOT_SELECTOR = 'div.roam-main, div#right-sidebar';
+const LINK_SELECTOR = 'a[target="_blank"]';
+const STYLE_PROPERTIES = [
+  'background-image', 'background-position', 'background-repeat', 'background-size',
+  'padding-left', 'padding-right',
+];
+const managedLinks = new Map();
+let observer = null;
+let refresh = null;
+let active = false;
+let generation = 0;
 
 function settingValue(key, value) {
   if ((key === 'size' || key === 'spacing') && typeof value === 'number') value = String(value);
@@ -109,56 +119,84 @@ function applyFavicon(el, url) {
   el.style[position === 'left' ? 'paddingLeft' : 'paddingRight'] = `${size + spacing}px`;
 }
 
+function eligibleLink(el) {
+  return el.isConnected && el.matches(LINK_SELECTOR) && el.closest(ROOT_SELECTOR)
+    && ['http:', 'https:'].includes(el.protocol) && el.hostname;
+}
+
+function releaseImage(entry) {
+  if (!entry.image) return;
+  entry.image.onload = null;
+  entry.image.onerror = null;
+  entry.image = null;
+}
+
 function addFavicon(el) {
-  if (el.dataset.faviconManager === 'true') return;
-  const host = (el.hostname || '').replace(/^www\./, '');
-  const custom = findCustomIcon(host);
-  const provider = getCfg('provider');
-  const fallback = getCfg('fallback');
-  const providerUrl = PROVIDERS[provider] ? PROVIDERS[provider](host) : '';
-  // Priority: custom icon > provider > fallback. If one fails to load, fall through to the next.
-  // The fallback is a true fallback: it only appears when the real icon (custom or provider) fails to load.
-  const candidates = [custom, providerUrl, fallback].filter(Boolean);
-  if (candidates.length === 0) return;
-  const tryNext = (i) => {
-    if (i >= candidates.length) return;
-    const url = candidates[i];
+  if (!active || !eligibleLink(el)) return;
+  const previous = managedLinks.get(el);
+  if (previous?.href === el.href) return;
+  if (previous) removeFavicon(el);
+  const host = el.hostname.replace(/^www\./, '');
+  // Keep custom > provider > fallback; a provider's valid placeholder is not a load error.
+  const candidates = [...new Set([
+    findCustomIcon(host), PROVIDERS[getCfg('provider')](host), getCfg('fallback'),
+  ].filter(Boolean))];
+  const entry = {
+    href: el.href,
+    marker: el.getAttribute('data-favicon-manager'),
+    styles: STYLE_PROPERTIES.map((property) => [
+      property, el.style.getPropertyValue(property), el.style.getPropertyPriority(property),
+    ]),
+    image: null,
+  };
+  managedLinks.set(el, entry);
+  el.dataset.faviconManager = 'true';
+  const tryNext = (index) => {
+    // Both identity and href matter: old errors must not repaint a new render or URL.
+    if (!active || managedLinks.get(el) !== entry || el.href !== entry.href || !eligibleLink(el)) return;
+    releaseImage(entry);
+    if (index >= candidates.length) {
+      removeFavicon(el);
+      return;
+    }
+    const url = candidates[index];
     applyFavicon(el, url);
-    const img = new Image();
-    img.onerror = () => tryNext(i + 1);
-    img.src = url;
+    const image = new Image();
+    entry.image = image;
+    image.onerror = () => { if (entry.image === image) tryNext(index + 1); };
+    image.onload = () => { if (entry.image === image) releaseImage(entry); };
+    image.src = url;
   };
   tryNext(0);
-  el.dataset.faviconManager = 'true';
 }
 
 function removeFavicon(el) {
-  if (el.dataset.faviconManager === 'true') {
-    el.style.removeProperty('background-image');
-    el.style.removeProperty('background-position');
-    el.style.removeProperty('background-repeat');
-    el.style.removeProperty('background-size');
-    // Clear BOTH padding sides so a left↔right position switch never leaves a stale pad behind.
-    el.style.removeProperty('padding-left');
-    el.style.removeProperty('padding-right');
-    delete el.dataset.faviconManager;
+  const entry = managedLinks.get(el);
+  if (!entry) return;
+  managedLinks.delete(el);
+  releaseImage(entry);
+  for (const [property, value, priority] of entry.styles) {
+    if (value) el.style.setProperty(property, value, priority);
+    else el.style.removeProperty(property);
   }
+  if (entry.marker === null) delete el.dataset.faviconManager;
+  else el.setAttribute('data-favicon-manager', entry.marker);
 }
 
-function process(root) {
-  if (!root) return;
-  root.querySelectorAll('a[target="_blank"]').forEach(addFavicon);
+function processAll() {
+  if (!active) return;
+  for (const el of managedLinks.keys()) {
+    if (!eligibleLink(el)) removeFavicon(el);
+  }
+  document.querySelectorAll(ROOT_SELECTOR).forEach((root) => {
+    root.querySelectorAll(LINK_SELECTOR).forEach(addFavicon);
+  });
 }
 
 function reapplyAll() {
-  ['div.roam-main', 'div#right-sidebar'].forEach((sel) => {
-    const root = document.querySelector(sel);
-    if (!root) return;
-    root.querySelectorAll('a[target="_blank"]').forEach((el) => {
-      removeFavicon(el);
-      addFavicon(el);
-    });
-  });
+  if (!active) return;
+  for (const el of managedLinks.keys()) removeFavicon(el);
+  processAll();
 }
 
 // Persist a setting value explicitly and re-render.
@@ -179,7 +217,9 @@ function extractValue(evt) {
 }
 
 function makeOnChange(key) {
+  const loadedGeneration = generation;
   return (evt) => {
+    if (!active || generation !== loadedGeneration) return;
     const v = extractValue(evt);
     if (typeof v !== 'string' && typeof v !== 'number') return;
     state[key] = settingValue(key, v);
@@ -189,29 +229,31 @@ function makeOnChange(key) {
 }
 
 function debounce(fn, wait = 400) {
-  let t = null;
-  return (...a) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...a), wait);
+  let timer = null;
+  const run = (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => { timer = null; fn(...args); }, wait);
   };
+  run.cancel = () => { clearTimeout(timer); timer = null; };
+  return run;
 }
 
-function startObserver(selector) {
-  const root = document.querySelector(selector);
-  if (!root) return;
-  const cb = debounce(() => process(root));
-  observers[selector] = new MutationObserver(cb);
-  observers[selector].observe(root, { attributes: false, childList: true, subtree: true });
-  process(root);
-}
-
-function stopObserver(selector) {
-  if (observers[selector]) observers[selector].disconnect();
-  const root = document.querySelector(selector);
-  if (root) root.querySelectorAll('a[target="_blank"]').forEach(removeFavicon);
+function startObserver() {
+  const loadedGeneration = generation;
+  refresh = debounce(() => { if (generation === loadedGeneration) processAll(); });
+  observer = new MutationObserver(refresh);
+  // Follow roots that mount late or are replaced, but only scan links inside Roam's
+  // content roots. Watching href/target (not style) avoids reacting to our own CSS.
+  observer.observe(document.body || document.documentElement, {
+    childList: true, subtree: true, attributes: true, attributeFilter: ['href', 'target'],
+  });
+  processAll();
 }
 
 function onload(input) {
+  // Also make direct repeated onload calls safe, without retaining another graph's state.
+  onunload();
+  active = true;
   // Roam Depot passes the extension API WRAPPED as { extensionAPI } — NOT the API object directly.
   // (Verified against shipping extensions RoamJS/autotag and 8bitgentleman/roam-depot-tweet-extract.)
   // The legacy roam/js route exposes the same API on window.roamjsExtensionAPI.
@@ -267,13 +309,19 @@ function onload(input) {
     console.warn('[Favicon Manager] extensionAPI not available — running with default settings (no settings panel).');
   }
 
-  startObserver('div.roam-main');
-  startObserver('div#right-sidebar');
+  startObserver();
 }
 
 function onunload() {
-  stopObserver('div.roam-main');
-  stopObserver('div#right-sidebar');
+  active = false;
+  generation += 1;
+  observer?.disconnect();
+  observer = null;
+  refresh?.cancel();
+  refresh = null;
+  for (const el of managedLinks.keys()) removeFavicon(el);
+  Object.assign(state, DEFAULTS);
+  extensionAPI = null;
 }
 
 export default { onload, onunload };
