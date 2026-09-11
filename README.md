@@ -1,45 +1,65 @@
 # Favicon Manager for Roam Research
 
-A small, friendly Roam Research extension that displays the favicon (website icon) next to any external link — with a **real settings panel** so you never have to touch code.
+A small Roam Research extension that displays the favicon (website icon) next to
+every external link — with a **settings panel**, so you never have to touch code.
 
-> Favicon Manager is a fork of [**roam-show-favicon**](https://github.com/paulovieira/roam-show-favicon) by **Paul Vieira (paulovieira)**. All credit for the original idea and implementation goes to him.
-> The original plugin had no settings UI (the author listed "make the options configurable by the user" as a future improvement); this version adds that settings panel plus per-site custom icons.
+> Favicon Manager is a fork of [**roam-show-favicon**](https://github.com/paulovieira/roam-show-favicon)
+> by **Paul Vieira (paulovieira)**. All credit for the original idea and its
+> implementation belongs to him.
+>
+> The original extension worked exactly as well as this one, but it could only be
+> configured by editing its source. Making those options user-configurable was on
+> the original author's own TODO list — this fork does that, and nothing else.
 
 ## What it does
 
-- Shows a small website icon next to every external link in Roam (main area + right sidebar).
-- Gives you a **settings panel** (in Roam Depot → Settings) to tune everything without code:
-  - **Icon position** — left or right of the link
-  - **Icon size** — in pixels (14–18 recommended)
-  - **Icon spacing** — gap between the icon and the text
-  - **Icon provider** — duckduckgo / google / yandex
-  - **Custom icons** — assign a specific favicon to any website by `domain=image-url` (e.g. `github.com=https://github.com/favicon.ico`). A bare domain also covers its subdomains.
-  - **Fallback icon** — an optional icon shown if a provider fails to load an image
-- Settings are saved per-graph and persist across sessions.
+- Shows a small website icon next to every external link in Roam (main area and
+  right sidebar), exactly like the original extension.
+- Adds a **settings panel** (Roam Settings → Extension Settings → Favicon Manager):
+
+| Setting | What it does |
+| --- | --- |
+| **Icon position** | Show the icon on the left or the right of the link |
+| **Icon size (px)** | Display size of the icon (14–18 works well) |
+| **Icon spacing (px)** | Gap between the icon and the link text |
+| **Icon provider** | Which service provides the icons: duckduckgo / google / yandex |
+| **Custom icons** | Give a specific website your own icon (see below) |
+
+- Settings are saved per graph and persist across sessions.
+
+## Custom icons
+
+In the settings panel, under **Custom icons**, write a mapping as
+`domain=image-url`:
+
+```
+github.com=https://github.com/favicon.ico
+```
+
+To give several websites their own icon, separate the mappings with a
+**semicolon**:
+
+```
+github.com=https://github.com/favicon.ico; wikipedia.org=https://www.wikipedia.org/static/favicon/wikipedia.ico
+```
+
+- The part before `=` is the website's domain (a leading `www.` is ignored).
+- The domain must match the link exactly — a mapping for `github.com` does not
+  apply to `gist.github.com`.
+- The part after `=` is any image URL.
 
 ## Install (Roam Depot)
 
-1. Open Roam Research → **Settings** (top-right menu) → **Roam Depot** (left sidebar).
+1. Open Roam Research → **Settings** → **Roam Depot**.
 2. Find **Favicon Manager** and enable it.
-3. Click the extension's **Settings** to open the panel and tune to taste.
-
-## Custom icons — quick example
-
-In the settings panel, under *Custom icons*, enter a `domain=image-url` mapping, e.g.:
-
-```
-github.com=https://www.google.com/s2/favicons?domain=github.com&sz=64
-```
-
-The part before `=` is the website domain (no `www.` needed). A bare domain also covers its subdomains — e.g. `github.com` will match `gist.github.com` too. The part after `=` is any image URL.
-
-> Note: this field is currently a single-line input, so it holds **one mapping at a time**. A multi-line editor (several `domain=image-url` lines) is a planned upgrade.
+3. Open its **Settings** tab to tune things.
 
 ## For developers
 
 - `extension.js` is the only required file. It `export default`s `{ onload, onunload }`.
-- Configuration lives in `extensionAPI.settings`; no external build step is required.
-- This project is a fork of [paulovieira/roam-show-favicon](https://github.com/paulovieira/roam-show-favicon).
+- Configuration lives in `extensionAPI.settings`; there is no build step and no
+  runtime dependency.
+- This is a fork of [paulovieira/roam-show-favicon](https://github.com/paulovieira/roam-show-favicon).
   Please keep the attribution intact if you fork further.
 
 ## License

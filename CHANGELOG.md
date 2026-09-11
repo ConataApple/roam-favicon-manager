@@ -1,5 +1,39 @@
 # Changelog
 
+## 2.0.0 — back to basics
+This release throws away the accumulated patches and rewrites `extension.js` from
+the **original** `paulovieira/roam-show-favicon` source, so that the behaviour is
+once again exactly the original extension's. On top of it sits one thing only:
+a settings panel.
+
+- **Removed the fallback icon.** It could never work: the favicon providers used
+  here always return an image (a generic globe when they have nothing better), so
+  a fallback that only appears "when loading fails" was dead code. The original
+  author's note about this problem was to try the next provider instead; he never
+  implemented it, so it is not implemented here either.
+- **Removed the provider-chain retry and image pre-loading** that only existed to
+  serve the fallback.
+- **Fixed the settings that never took effect.** The previous `extractValue()`
+  decided between "checkbox" and "text field" by testing
+  `typeof evt.target.checked === 'boolean'` — but *every* `<input>` has a
+  `.checked` property, `false` for text fields, so every text setting was read as
+  `false`. That silently broke Custom icons, Fallback, size and spacing.
+- **Custom icons** now work reliably, and use the very same plain single-line
+  text field as every other setting — no custom control, so it simply inherits
+  Roam's own look and light/dark theme. Write one `domain=image-url` mapping;
+  separate several mappings with a semicolon. Exact domain match (a leading
+  `www.` is ignored).
+- **Cleaner settings handling:** `settings.get()` returns `null` (not
+  `undefined`) for an unset key — the old check never matched, so the defaults
+  were never written to the store.
+- **Cleaner lifecycle:** unload now cancels every pending timer (the debounced
+  DOM pass included), so a stale callback can no longer re-decorate links after
+  the extension was disabled or reloaded.
+- **Sturdier start-up:** if `div.roam-main` is not mounted yet when the extension
+  loads, we retry briefly instead of silently doing nothing.
+- Removed the "multi-line is a planned upgrade" caveat from the README: it is no
+  longer true.
+
 ## 1.0.12
 - **Fixed Custom icons and Fallback still not working (the real root cause).** 1.0.11 assumed Roam Depot passes the raw value to a setting's `onChange`, so it checked `typeof value === 'string'`. That was wrong: Depot passes an **event object** (`evt.target.value` for input/select, `evt.target.checked` for switch) and the persisted store can return stale values right after a change. So `customIcons`/`fallback` (empty defaults) never captured what was typed, while `provider` kept "working" only because its non-empty default masked the bug. `makeOnChange` now reads the value from the event object via `extractValue(evt)` — the same pattern used by the shipping Depot extension `camflint/reddit-unofficial` — and persists it with `settings.set`. Custom icons and Fallback now take effect immediately and survive reloads. (1.0.11's cache was kept; it's now fed the correct value.)
 
