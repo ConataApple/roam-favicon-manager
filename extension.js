@@ -147,7 +147,8 @@ function reapplyAll() {
 // the shipping Depot extension camflint/reddit-unofficial).
 function extractValue(evt) {
   if (evt && evt.target) {
-    if (typeof evt.target.checked === 'boolean') return evt.target.checked;
+    // Text inputs also have checked === false; only checkbox/radio use it.
+    if (evt.target.type === 'checkbox' || evt.target.type === 'radio') return evt.target.checked;
     return evt.target.value;
   }
   return evt; // already the value (defensive fallback)

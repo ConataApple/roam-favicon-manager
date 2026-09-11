@@ -1,0 +1,12 @@
+{
+  "name": "roam-favicon-manager",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/run.mjs",
+    "check": "node --check extension.js && node --check tests/browser.test.js && node --check tests/harness.js && node --check tests/run.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
