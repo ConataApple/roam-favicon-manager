@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+- Fix text input settings being read as `checked: false`; checkbox/radio detection now checks the input type.
+- Recover invalid stored setting types and retired provider values. Preserve valid strings and legacy numeric values, support zero spacing, and report save failures.
+- Cancel debounced work and invalidate pending image/panel callbacks on unload or reload. Old requests cannot overwrite newer settings or URLs.
+- Restore the link's original inline styles and priorities, including after every image candidate fails.
+- Observe link `href`/`target` changes and content roots mounted or replaced after startup; release detached links and skip non-HTTP links.
+- Match custom domains case-insensitively, prefer the most specific parent, and avoid inherited object properties.
+- Add dependency-free Chrome regression tests, plus instructions for testing a source PR locally and the accepted Depot artifact separately.
+
 ## 1.0.12
 - **Fixed Custom icons and Fallback still not working (the real root cause).** 1.0.11 assumed Roam Depot passes the raw value to a setting's `onChange`, so it checked `typeof value === 'string'`. That was wrong: Depot passes an **event object** (`evt.target.value` for input/select, `evt.target.checked` for switch) and the persisted store can return stale values right after a change. So `customIcons`/`fallback` (empty defaults) never captured what was typed, while `provider` kept "working" only because its non-empty default masked the bug. `makeOnChange` now reads the value from the event object via `extractValue(evt)` — the same pattern used by the shipping Depot extension `camflint/reddit-unofficial` — and persists it with `settings.set`. Custom icons and Fallback now take effect immediately and survive reloads. (1.0.11's cache was kept; it's now fed the correct value.)
 
