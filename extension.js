@@ -34,15 +34,39 @@ const PROVIDERS = {
 
 const observers = {};
 
-// Pull a setting value into the in-memory cache from persisted storage.
+function settingValue(key, value) {
+  if ((key === 'size' || key === 'spacing') && typeof value === 'number') value = String(value);
+  if (typeof value !== 'string') return DEFAULTS[key];
+  if (key === 'position' && !['left', 'right'].includes(value)) return DEFAULTS[key];
+  if (key === 'provider' && !Object.hasOwn(PROVIDERS, value)) return DEFAULTS[key];
+  return value;
+}
+
+function saveSetting(key, value) {
+  const warn = (error) => console.warn(`[Favicon Manager] Could not save setting "${key}".`, error);
+  try {
+    Promise.resolve(extensionAPI.settings.set(key, value)).catch(warn);
+  } catch (error) {
+    warn(error);
+  }
+}
+
+// Recover invalid types written by older versions without discarding valid strings.
 function syncState(key) {
-  const v = extensionAPI && extensionAPI.settings ? extensionAPI.settings.get(key) : undefined;
-  state[key] = (v !== undefined && v !== null && v !== '') ? v : DEFAULTS[key];
+  const stored = extensionAPI.settings.get(key);
+  state[key] = settingValue(key, stored);
+  if (stored !== state[key]) saveSetting(key, state[key]);
 }
 
 function getCfg(key) {
-  if (state[key] !== undefined) return state[key];
-  return DEFAULTS[key];
+  return state[key] ?? DEFAULTS[key];
+}
+
+function numericCfg(key) {
+  const raw = getCfg(key);
+  const value = raw.trim() === '' ? NaN : Number(raw);
+  const minimum = key === 'size' ? 1 : 0;
+  return Number.isSafeInteger(value) && value >= minimum ? value : Number(DEFAULTS[key]);
 }
 
 function parseCustomIcons() {
@@ -76,8 +100,8 @@ function findCustomIcon(host) {
 
 function applyFavicon(el, url) {
   const position = getCfg('position');
-  const size = parseInt(getCfg('size'), 10) || 16;
-  const spacing = parseInt(getCfg('spacing'), 10) || 4;
+  const size = numericCfg('size');
+  const spacing = numericCfg('spacing');
   el.style['background-image'] = `url("${url}")`;
   el.style['background-position'] = `${position} center`;
   el.style['background-repeat'] = 'no-repeat';
@@ -157,10 +181,9 @@ function extractValue(evt) {
 function makeOnChange(key) {
   return (evt) => {
     const v = extractValue(evt);
-    if (v !== undefined && v !== null) {
-      state[key] = v;
-      try { extensionAPI.settings.set(key, v); } catch (e) { /* ignore */ }
-    }
+    if (typeof v !== 'string' && typeof v !== 'number') return;
+    state[key] = settingValue(key, v);
+    saveSetting(key, state[key]);
     reapplyAll();
   };
 }
@@ -197,12 +220,7 @@ function onload(input) {
     : (window.roamjsExtensionAPI || null);
 
   if (extensionAPI) {
-    Object.keys(DEFAULTS).forEach((k) => {
-      if (extensionAPI.settings.get(k) === undefined) {
-        extensionAPI.settings.set(k, DEFAULTS[k]);
-      }
-      syncState(k);
-    });
+    Object.keys(DEFAULTS).forEach(syncState);
 
     extensionAPI.settings.panel.create({
       tabTitle: 'Favicon Manager',

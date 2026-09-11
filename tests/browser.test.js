@@ -53,6 +53,51 @@ await test('Provider select still works', {}, (h) => {
   assert(h.link.style.backgroundImage.includes('google.com/s2/favicons'), 'Google provider not selected');
 });
 
+await test('Zero spacing remains zero after reload', { spacing: '0' }, (h) => {
+  equal(h.link.style.paddingLeft, '16px');
+  h.extension.onunload(); h.load();
+  equal(h.link.style.paddingLeft, '16px');
+});
+
+for (const value of ['', '-2', 'NaN', 'Infinity', '20px', '1.5']) {
+  await test(`Invalid numeric settings use defaults: ${JSON.stringify(value)}`, { size: value, spacing: value }, (h) => {
+    equal(h.link.style.backgroundSize, '16px auto');
+    equal(h.link.style.paddingLeft, '20px');
+  });
+}
+
+await test('Zero size uses the default while valid large settings remain supported', { size: '0', spacing: '100' }, (h) => {
+  equal(h.link.style.backgroundSize, '16px auto');
+  equal(h.link.style.paddingLeft, '116px');
+});
+
+await test('Invalid stored types and retired provider values recover to defaults', {
+  customIcons: { target: { value: 'bad old event' } }, fallback: false, size: false,
+  spacing: false, position: 'up', provider: 'favicon.im',
+}, (h) => {
+  equal(h.settings.customIcons, '');
+  equal(h.settings.fallback, '');
+  equal(h.settings.size, '16');
+  equal(h.settings.spacing, '4');
+  equal(h.settings.position, 'left');
+  equal(h.settings.provider, 'duckduckgo');
+  equal(h.link.style.paddingLeft, '20px');
+});
+
+await test('Legacy numeric settings are preserved as strings', { size: 24, spacing: 0 }, (h) => {
+  equal(h.settings.size, '24');
+  equal(h.settings.spacing, '0');
+  equal(h.link.style.paddingLeft, '24px');
+});
+
+await test('Synchronous persistence failure is visible without breaking rendering', {
+  position: 'left', size: '16', spacing: '4', provider: 'duckduckgo', customIcons: '', fallback: '',
+}, (h) => {
+  h.input('size', '24');
+  equal(h.link.style.backgroundSize, '24px auto');
+  assert(h.warnings.length > 0, 'Persistence failure was silently swallowed');
+}, { setError: new Error('Test storage failure') });
+
 window.__faviconTestResults = results;
 document.querySelector('#results').textContent = JSON.stringify(results, null, 2);
 document.title = results.every((result) => result.pass) ? 'PASS' : 'FAIL';
