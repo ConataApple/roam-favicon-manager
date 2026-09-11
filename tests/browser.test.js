@@ -158,6 +158,15 @@ await test('Unload restores original styles and priorities without changing unre
   equal(h.link.style.color, 'blue');
 }, { styles: 'padding-left: 7px !important; padding-right: 3px; background-image: linear-gradient(red, blue); color: red;' });
 
+await test('Unload restores unresolved CSS-variable shorthands', {}, (h) => {
+  h.link.style.color = 'blue';
+  h.extension.onunload();
+  equal(h.link.style.getPropertyValue('background'), 'var(--link-background)');
+  equal(h.link.style.getPropertyValue('padding'), 'var(--link-padding)');
+  equal(h.link.style.getPropertyPriority('padding'), 'important');
+  equal(h.link.style.color, 'blue');
+}, { styles: 'background: var(--link-background); padding: var(--link-padding) !important; color: red;' });
+
 await test('Editing href in place updates the icon', {}, async (h) => {
   h.link.href = 'https://different.example/path';
   await h.settle();
@@ -267,6 +276,29 @@ await test('Rejected asynchronous persistence is reported without an unhandled r
   equal(h.link.style.backgroundSize, '24px auto');
   assert(h.warnings.length > 0, 'Rejected save was not reported');
 }, { setResult: Promise.reject(new Error('Test asynchronous storage failure')) });
+
+await test('The unmodified ES module works in the live document and unloads cleanly', {}, async (h) => {
+  const { default: extension } = await import('../extension.js');
+  const OriginalImage = window.Image;
+  const root = document.createElement('div'); root.className = 'roam-main';
+  root.innerHTML = '<a target="_blank" href="https://example.com">Live document</a>';
+  window.Image = class { set src(value) { this.url = value; } };
+  document.body.append(root);
+  try {
+    extension.onload({ extensionAPI: h.api });
+    const link = root.querySelector('a');
+    h.input('size', '24');
+    equal(h.settings.size, '24');
+    equal(link.style.backgroundSize, '24px auto');
+    extension.onunload();
+    equal(link.style.backgroundImage, '');
+    equal(link.style.paddingLeft, '');
+  } finally {
+    extension.onunload();
+    root.remove();
+    window.Image = OriginalImage;
+  }
+});
 
 window.__faviconTestResults = results;
 document.querySelector('#results').textContent = JSON.stringify(results, null, 2);

@@ -149,6 +149,11 @@ function addFavicon(el) {
   const entry = {
     href: el.href,
     marker: el.getAttribute('data-favicon-manager'),
+    // Pending substitutions such as padding: var(--pad) have empty longhand
+    // values in CSSOM. Keep the shorthand so clearing our longhands can restore it.
+    shorthands: [['background', 'background-image'], ['padding', 'padding-left']]
+      .filter(([name, longhand]) => el.style.getPropertyValue(name) && !el.style.getPropertyValue(longhand))
+      .map(([name]) => [name, el.style.getPropertyValue(name), el.style.getPropertyPriority(name)]),
     styles: STYLE_PROPERTIES.map((property) => [
       property, el.style.getPropertyValue(property), el.style.getPropertyPriority(property),
     ]),
@@ -183,6 +188,9 @@ function removeFavicon(el) {
   for (const [property, value, priority] of entry.styles) {
     if (value) el.style.setProperty(property, value, priority);
     else el.style.removeProperty(property);
+  }
+  for (const [property, value, priority] of entry.shorthands) {
+    el.style.setProperty(property, value, priority);
   }
   if (entry.marker === null) delete el.dataset.faviconManager;
   else el.setAttribute('data-favicon-manager', entry.marker);
