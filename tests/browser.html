@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-eval'; connect-src 'self'; img-src 'none'; style-src 'unsafe-inline'">
+  <title>Running favicon regression tests</title>
+</head>
+<body>
+  <h1>Favicon Manager browser regression tests</h1>
+  <p>Uses a real DOM and controlled host settings, image responses, and timers. No Roam graph or favicon service is contacted.</p>
+  <pre id="results">Running…</pre>
+  <script type="module" src="./browser.test.js"></script>
+</body>
+</html>
